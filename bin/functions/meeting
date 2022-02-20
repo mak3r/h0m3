@@ -1,0 +1,94 @@
+#!/bin/bash 
+
+function meeting() 
+{
+
+	meeting_usage() { 
+		echo -e "Usage: \tmeeting [-tyldhrs] [filename]"
+		echo -e "\tBasic usage 'meeting <filename>'"
+		echo -e "\tCreate a file specified by <filename> in the path indicated by date."
+		echo -e "\tAssume todays date unless one of t, y or d are specified"
+		echo -e "\t  t - use tomorrow's date"
+		echo -e "\t  y - use yesterday's date"
+		echo -e "\t  d - use date specified by date format. Specify 9 days ago for example 'meeting -d \"-v -9d +%Y/%m/%d\"'"
+		echo -e "\t  D - use todays date as the basis for adding or subtracting days. Use with -l for example 'meeting -l -D \"-2\"'"
+		echo -e "\t\t Be sure to quote the argument to -D otherwise the '+' or '-' will be interpreted by the shell."
+		echo -e "\t  f - find file entries with name"
+		echo -e "\t  l - list files on date. If <filename> is specified, it is ignored."  
+		echo -e "\t  r - specify the root directory to use"
+		echo -e "\t  s - show the root directory being used"
+	}
+
+	#use todays date unless alternative dates are specified
+	DATE="$(date +%Y/%m/%d)"
+	LIST=0
+	HELP=0
+	ROOT="$HOME/dev/meetings"
+	SHOW=0
+	CURPATH=""
+	FIND=""
+
+	local OPTIND opt tylhsfdDr
+	while getopts "tyhsl:f:d:D:r:" opt; do
+		case $opt in
+			#tomorrow
+			t)
+				DATE="$(date -v +1d +%Y/%m/%d)"
+			;;
+			#yesterday
+			y) 
+				DATE="$(date -v -1d +%Y/%m/%d)"
+			;;
+			#specify the date in bash 'date' format
+			d)
+				DATE="$(date $OPTARG)"
+			;;
+			D)
+				DATE=$(date -v "$OPTARG"d +%Y/%m/%d)
+			;;
+			#list the existing files for date
+			l)
+				LIST=1
+				CURPATH="$OPTARG"
+			;;
+			h)
+				HELP=1
+			;;
+			r)
+				ROOT="$OPTARG"
+			;;
+			s)
+				SHOW=1
+			;;
+			f)
+				FIND="$OPTARG"
+			;;
+			\?)
+			echo "Invalid option: -$OPTARG" >&2
+			;;
+		esac
+	done
+	shift $((OPTIND-1))
+
+	if [[ "$CURPATH" == "" ]]; then
+		CURPATH="$ROOT/$DATE"
+	fi
+
+	if [[ "$HELP" -eq "1" ]]; then
+		meeting_usage
+	else
+		if [[ "$SHOW" -eq "1" ]]; then
+			echo $ROOT
+		elif [[ "$FIND" != "" ]]; then
+			find "$ROOT" -iname "$FIND"
+		else 
+			if [[ "$LIST" -eq "0" ]]; then
+				code "$CURPATH/$*"
+			else
+				echo "List of meetings in $CURPATH:"
+				ls "$CURPATH"
+			fi
+		fi
+	fi
+
+}
